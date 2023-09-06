@@ -1,49 +1,30 @@
 #!/usr/bin/python3
-# Fabscript to distributes an archive to a web server.->1-pack_web_static.py
-import os.path
-from fabric.api import env
-from fabric.api import put
-from fabric.api import run
+"""Fabfile that distributes archive to web servers."""
 
-env.hosts = ['52.72.12.225', '18.234.145.87']
+from fabric.api import *
+import os
+
+env.hosts = ["3.239.76.17", "34.229.62.150"]
+env.user = "ubuntu"
 
 
 def do_deploy(archive_path):
-    """Distributes an archive to a web server.
-
-    Args:
-        archive_path (str): The path of the archive to distribute.
-    Returns:
-        If the file doesn't exist at archive_path or an error occurs - False.
-        Otherwise - True.
     """
-    if os.path.isfile(archive_path) is False:
-        return False
-    file = archive_path.split("/")[-1]
-    name = file.split(".")[0]
-
-    if put(archive_path, "/tmp/{}".format(file)).failed is True:
-        return False
-    if run("rm -rf /data/web_static/releases/{}/".
-           format(name)).failed is True:
-        return False
-    if run("mkdir -p /data/web_static/releases/{}/".
-           format(name)).failed is True:
-        return False
-    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".
-           format(file, name)).failed is True:
-        return False
-    if run("rm /tmp/{}".format(file)).failed is True:
-        return False
-    if run("mv /data/web_static/releases/{}/web_static/* "
-           "/data/web_static/releases/{}/".format(name, name)).failed is True:
-        return False
-    if run("rm -rf /data/web_static/releases/{}/web_static".
-           format(name)).failed is True:
-        return False
-    if run("rm -rf /data/web_static/current").failed is True:
-        return False
-    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".
-           format(name)).failed is True:
-        return False
-    return True
+    Distribute archive to web servers path if correctly generated,
+    otherwise Return False
+    """
+    if os.path.exists(archive_path):
+        file_archive = archive_path[9:]
+        new_version = "/data/web_static/releases/" + file_archive[:-4]
+        file_archive = "/tmp/" + file_archive
+        put(archive_path, "/tmp/")
+        run("sudo mkdir -p {}".format(new_version))
+        run("sudo tar -xzf {} -C {}/".format(file_archive, new_version))
+        run("sudo rm {}".format(file_archive))
+        run("sudo mv {}/web_static/* {}".format(new_version, new_version))
+        run("sudo rm -rf {}/web_static".format(new_version))
+        run("sudo rm -rf /data/web_static/current")
+        run("sudo ln -s {} /data/web_static/current"
+            .format(new_version))
+        return True
+    return False
